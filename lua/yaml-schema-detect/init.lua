@@ -294,14 +294,11 @@ function M.setup()
       M.refreshSchema()
     end,
   })
-  require("which-key").register({
-    x = {
-      r = {
-        M.refreshSchema,
-        "Refresh YAML schema",
-      },
-    },
-  }, { prefix = "<leader>" })
+  require("which-key").add({ {
+    "<leader>xr",
+    M.refreshSchema,
+    desc = "Refresh YAML schema",
+  } })
   vim.api.nvim_create_autocmd("VimLeavePre", {
     desc = "yaml: auto-k8s-schema-detect: cleanup temporary file",
     callback = cleanup,
