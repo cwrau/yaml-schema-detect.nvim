@@ -26,7 +26,7 @@ local function change_settings(schemaURI)
     return
   end
   local currentBufferSelector = vim.uri_from_bufnr(vim.api.nvim_get_current_buf())
-  local previous_settings = client.config.settings
+  local previous_settings = client.settings
   if previous_settings and previous_settings.yaml and previous_settings.yaml.schemas then
     for existingSchemaURI, existingSelectors in pairs(previous_settings.yaml.schemas) do
       if vim.islist(existingSelectors) then
@@ -40,14 +40,14 @@ local function change_settings(schemaURI)
       end
     end
   end
-  client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
+  client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
     yaml = {
       schemas = {
         [schemaURI] = currentBufferSelector,
       },
     },
   })
-  client.notify("workspace/didChangeConfiguration", { settings = client.config.settings })
+  client.notify("workspace/didChangeConfiguration", { settings = client.settings })
 end
 
 ---@param path string
@@ -290,9 +290,7 @@ end
 
 function M.setup()
   require("lspconfig").yamlls.setup({
-    on_attach = function()
-      M.refreshSchema()
-    end,
+    on_attach = M.refreshSchema,
   })
   require("which-key").add({ {
     "<leader>xr",
