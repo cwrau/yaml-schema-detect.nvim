@@ -20,8 +20,9 @@ local function get_client()
 end
 
 ---@param schemaURI string
-local function change_settings(schemaURI)
-  local client = get_client()
+---@param client vim.lsp.Client|nil
+local function change_settings(schemaURI, client)
+  client = client or get_client()
   if client == nil then
     return
   end
@@ -48,6 +49,7 @@ local function change_settings(schemaURI)
     },
   })
   client.notify("workspace/didChangeConfiguration", { settings = client.settings })
+  vim.notify("YAML schema has been updated", vim.log.levels.INFO)
 end
 
 ---@param path string
@@ -221,7 +223,8 @@ local function getSchemas(lines, callback)
   end
 end
 
-function M.refreshSchema()
+---@param client vim.lsp.Client|nil
+function M.refreshSchema(client)
   local bufnr = vim.api.nvim_get_current_buf()
   local fileName = vim.api.nvim_buf_get_name(bufnr)
   if fileName:find("values.yaml$") then
@@ -233,7 +236,7 @@ function M.refreshSchema()
     end
 
     if file_exists(schemaPath) then
-      return change_settings("file://" .. schemaPath)
+      return change_settings("file://" .. schemaPath, client)
     end
   end
 
@@ -264,7 +267,7 @@ function M.refreshSchema()
       end
       M.tmpFile = nil
       vim.schedule(function()
-        change_settings(schemaURI)
+        change_settings(schemaURI, client)
       end)
     end
   end)
