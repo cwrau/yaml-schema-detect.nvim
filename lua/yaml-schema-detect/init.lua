@@ -301,6 +301,12 @@ local function cleanup()
 end
 
 function M.setup()
+  local requiredTools = { "kubectl", "jq" }
+  for _, tool in ipairs(requiredTools) do
+    if vim.fn.executable(tool) ~= 1 then
+      vim.notify(tool .. " is not installed", vim.log.levels.ERROR)
+    end
+  end
   require("lspconfig").yamlls.setup({
     on_attach = M.refreshSchema,
   })
