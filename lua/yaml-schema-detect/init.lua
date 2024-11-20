@@ -27,29 +27,38 @@ local function change_settings(schemaURI, client)
     return
   end
   local currentBufferSelector = vim.uri_from_bufnr(vim.api.nvim_get_current_buf())
-  local previous_settings = client.settings
-  if previous_settings and previous_settings.yaml and previous_settings.yaml.schemas then
-    for existingSchemaURI, existingSelectors in pairs(previous_settings.yaml.schemas) do
-      if vim.islist(existingSelectors) then
-        for idx, existingSelector in pairs(existingSelectors) do
-          if existingSelector == currentBufferSelector or string.find(existingSelector, "*") then
-            table.remove(previous_settings.yaml.schemas[existingSchemaURI], idx)
+  if
+    client.settings == nil
+    or client.settings.yaml == nil
+    or client.settings.yaml.schemas == nil
+    or client.settings.yaml.schemas[schemaURI] ~= currentBufferSelector
+  then
+    local previous_settings = client.settings
+    if previous_settings and previous_settings.yaml and previous_settings.yaml.schemas then
+      for existingSchemaURI, existingSelectors in pairs(previous_settings.yaml.schemas) do
+        if vim.islist(existingSelectors) then
+          for idx, existingSelector in pairs(existingSelectors) do
+            if existingSelector == currentBufferSelector or string.find(existingSelector, "*") then
+              table.remove(previous_settings.yaml.schemas[existingSchemaURI], idx)
+            end
           end
+        elseif existingSelectors == currentBufferSelector or string.find(existingSelectors, "*") then
+          previous_settings.yaml.schemas[existingSchemaURI] = nil
         end
-      elseif existingSelectors == currentBufferSelector or string.find(existingSelectors, "*") then
-        previous_settings.yaml.schemas[existingSchemaURI] = nil
       end
     end
-  end
-  client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
-    yaml = {
-      schemas = {
-        [schemaURI] = currentBufferSelector,
+    client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
+      yaml = {
+        schemas = {
+          [schemaURI] = currentBufferSelector,
+        },
       },
-    },
-  })
-  client.notify("workspace/didChangeConfiguration", { settings = client.settings })
-  vim.notify("YAML schema has been updated", vim.log.levels.INFO)
+    })
+    client.notify("workspace/didChangeConfiguration", { settings = client.settings })
+    vim.notify("YAML schema has been updated", vim.log.levels.INFO)
+  else
+    vim.notify("YAML schema is already up-to-date", vim.log.levels.INFO)
+  end
 end
 
 ---@param path string
@@ -154,35 +163,37 @@ local function getSchema(type, callback)
             else
               os.remove(M.tmpFile)
               M.tmpFile = nil
-              Job:new({
-                command = "bash",
-                args = {
-                  "-e",
-                  "-o",
-                  "pipefail",
-                  "-c",
-                  [[kubectl version -o json | jq -er '.serverVersion.gitVersion' ]],
-                },
-                enable_recording = true,
-                on_exit = function(job, kubeVersionExitCode, _)
-                  ---@type string
-                  local kubeVersion
-                  if kubeVersionExitCode == 0 then
-                    kubeVersion = job:result()[1]
-                  else
-                    kubeVersion = "master"
-                  end
-                  callback(
-                    "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/"
-                      .. kubeVersion
-                      .. "-standalone-strict/"
-                      .. type.kind:lower()
-                      .. "-"
-                      .. type.apiVersion:gsub("/", "-")
-                      .. ".json"
-                  )
-                end,
-              }):start()
+              Job
+                :new({
+                  command = "bash",
+                  args = {
+                    "-e",
+                    "-o",
+                    "pipefail",
+                    "-c",
+                    [[ kubectl version -o json | jq -er '.serverVersion | "v\(.major).\(.minor).0"' ]],
+                  },
+                  enable_recording = true,
+                  on_exit = function(job, kubeVersionExitCode, _)
+                    ---@type string
+                    local kubeVersion
+                    if kubeVersionExitCode == 0 then
+                      kubeVersion = job:result()[1]
+                    else
+                      kubeVersion = "master"
+                    end
+                    callback(
+                      "https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/"
+                        .. kubeVersion
+                        .. "-standalone-strict/"
+                        .. type.kind:lower()
+                        .. "-"
+                        .. type.apiVersion:gsub("/", "-"):gsub(".authorization.k8s.io", ""):gsub(".k8s.io", "")
+                        .. ".json"
+                    )
+                  end,
+                })
+                :start()
             end
           end,
         }):start()
@@ -261,10 +272,10 @@ function M.refreshSchema(client)
     if file then
       file:write(schemaJson)
       file:close()
-      local schemaURI = "file://" .. M.tmpFile
-      if M.buffers[bufnr] ~= schemaURI then
-        M.buffers[bufnr] = schemaURI
+      if M.buffers[bufnr] ~= M.tempFile then
+        M.buffers[bufnr] = M.tempFile
       end
+      local schemaURI = "file://" .. M.tmpFile
       M.tmpFile = nil
       vim.schedule(function()
         change_settings(schemaURI, client)
@@ -282,9 +293,7 @@ local function cleanup()
     end
   end
   for _, schemaURI in pairs(M.buffers) do
-    if schemaURI:find("^file://") then
-      pcall(os.remove, schemaURI:sub(8))
-    end
+    pcall(os.remove, schemaURI:sub(8))
   end
   if M.tmpFile then
     pcall(os.remove, M.tmpFile)
