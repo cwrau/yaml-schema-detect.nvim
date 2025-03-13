@@ -24,7 +24,7 @@ Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 
 ```lua
 use {
-  'cwr/yaml-schema-detect.nvim',
+  'cwrau/yaml-schema-detect.nvim',
   requires = {
     'nvim-lua/plenary.nvim',
   }
@@ -35,7 +35,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
-  'cwr/yaml-schema-detect.nvim',
+  'cwrau/yaml-schema-detect.nvim',
   dependencies = {
     'nvim-lua/plenary.nvim',
   }
