@@ -47,6 +47,14 @@ local function check_kubernetes()
 
     if output.code == 0 then
       health.ok("Kubernetes cluster is accessible")
+      
+      -- Check RBAC permissions for CRDs
+      local crd_output = vim.system({ "kubectl", "get", "crds" }, { stdout = false, stderr = false }):wait()
+      if crd_output.code == 0 then
+        health.ok("Has permissions to read all CRDs")
+      else
+        health.warn("No permissions to read all CRDs. Schema detection for custom resources may not work")
+      end
     else
       health.warn("Kubernetes cluster not accessible. Some CRD schema features may not work")
     end
