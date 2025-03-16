@@ -1,5 +1,7 @@
 local M = {}
 
+local util = require("lspconfig.util")
+
 local health = vim.health
 local function check_executable(name)
   if vim.fn.executable(name) == 1 then
@@ -23,17 +25,9 @@ local function check_plugin(plugin)
 end
 
 local function check_lsp_client()
-  local active_clients = vim.lsp.get_active_clients()
-  local yaml_client_found = false
+  local yaml_client = util.get_active_client_by_name(vim.api.nvim_get_current_buf(), "yamlls")
 
-  for _, client in ipairs(active_clients) do
-    if client.name == "yamlls" then
-      yaml_client_found = true
-      break
-    end
-  end
-
-  if yaml_client_found then
+  if yaml_client ~= nil then
     health.ok("yaml-language-server is running")
   else
     health.warn("yaml-language-server is not running. Make sure it's properly configured in your LSP setup")
@@ -47,7 +41,7 @@ local function check_kubernetes()
 
     if output.code == 0 then
       health.ok("Kubernetes cluster is accessible")
-      
+
       -- Check RBAC permissions for CRDs
       local crd_output = vim.system({ "kubectl", "get", "crds" }, { stdout = false, stderr = false }):wait()
       if crd_output.code == 0 then
