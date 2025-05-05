@@ -25,7 +25,7 @@ local function check_plugin(plugin)
 end
 
 local function check_lsp_client()
-  local yaml_client = util.get_active_client_by_name(vim.api.nvim_get_current_buf(), "yamlls")
+  local yaml_client = vim.lsp.get_clients({ name = "yamlls" })[1]
 
   if yaml_client ~= nil then
     health.ok("yaml-language-server is running")
@@ -58,7 +58,6 @@ end
 function M.check()
   health.start("yaml-schema-detect.nvim report")
 
-  -- Check required plugins
   local required_plugins = {
     "plenary",
     "lspconfig",
@@ -67,20 +66,17 @@ function M.check()
     check_plugin(plugin)
   end
 
-  -- Check required executables
   local required_executables = {
-    "yaml-language-server",
     "bash",
     "jq",
+    "curl",
   }
   for _, executable in ipairs(required_executables) do
     check_executable(executable)
   end
 
-  -- Check LSP client
   check_lsp_client()
 
-  -- Check Kubernetes setup (optional but recommended)
   check_kubernetes()
 end
 
