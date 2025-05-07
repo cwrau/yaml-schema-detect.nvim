@@ -160,7 +160,7 @@ local function getTypes(lines)
 end
 
 ---@param type Type
----@param callback fun(schemaURI: string|nil)
+---@param callback fun(schemaURI: string)
 local function getSchemaFromCatalogues(type, callback)
   ---@diagnostic disable-next-line: missing-fields
   return Job:new({
@@ -214,7 +214,7 @@ local function getSchemaFromCatalogues(type, callback)
             elseif #urls > 1 then
               return listCallback({ unpack(urls, 2) })
             else
-              return callback(nil)
+              return callback("")
             end
           end)
           :start()
@@ -225,14 +225,14 @@ local function getSchemaFromCatalogues(type, callback)
 end
 
 ---@param type Type|TypeOverride
----@param callback fun(schemaURI: string|nil)
+---@param callback fun(schemaURI: string)
 local function getSchema(type, callback)
   if type.override then
     return callback(type.override)
   elseif type.apiVersion and type.kind then
     if type.apiVersion.group == nil and type.apiVersion.version == "v1" and type.kind == "List" then
       -- TODO: implement List schema
-      return callback(nil)
+      return callback("")
     else
       if M.schemas[type.apiVersion:joinedString()] then
         local schemaFile = M.schemas[type.apiVersion:joinedString()][type.kind]
@@ -288,7 +288,7 @@ local function getSchema(type, callback)
                 file:write(table.concat(job:result(), ""))
                 return callback("file://" .. tmpFile)
               else
-                return callback(nil)
+                return callback("")
               end
             else
               ---@cast type Type
@@ -298,18 +298,23 @@ local function getSchema(type, callback)
         }):start()
       end
     end
-    return callback(nil)
+    return callback("")
   end
 end
 
 ---@param lines string[]
----@param callback fun(schemaURIs: (string|nil)[])
+---@param callback fun(schemaURIs: string[])
 local function getSchemas(lines, callback)
-  ---@type fun(types: (Type|TypeOverride)[], schemas: (string|nil)[])
+  ---@type fun(types: (Type|TypeOverride)[], schemas: string[])
   local listCallback
   listCallback = function(types, schemas)
     local type = types[1]
     getSchema(type, function(schemaURI)
+      if schemaURI == "" then
+        vim.schedule(function()
+          vim.notify("Couldn't find schema for " .. type.apiVersion:joinedString() .. "/" .. type.kind)
+        end)
+      end
       if type.apiVersion and type.kind then
         M.schemas[type.apiVersion:joinedString()] = M.schemas[type.apiVersion:joinedString()] or {}
         if M.schemas[type.apiVersion:joinedString()][type.kind] ~= schemaURI then
@@ -362,7 +367,11 @@ function M.refreshSchema(client)
         schemaSequence = {},
       }
       for _, documentSchemaURI in ipairs(schemaURIs) do
-        table.insert(schema.schemaSequence, { ["$ref"] = documentSchemaURI })
+        if documentSchemaURI ~= "" then
+          table.insert(schema.schemaSequence, { ["$ref"] = documentSchemaURI })
+        else
+          table.insert(schema.schemaSequence, {})
+        end
       end
       M.buffers[bufnr] = M.buffers[bufnr] or os.tmpname()
       local file = io.open(M.buffers[bufnr], "w")
