@@ -214,7 +214,7 @@ local function getSchemaFromCatalogues(type, callback)
             elseif #urls > 1 then
               return listCallback({ unpack(urls, 2) })
             else
-              return callback(urls[1])
+              return callback(nil)
             end
           end)
           :start()
