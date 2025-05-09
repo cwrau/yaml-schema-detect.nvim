@@ -286,6 +286,7 @@ local function getSchema(type, callback)
               local file = io.open(tmpFile, "w")
               if file then
                 file:write(table.concat(job:result(), ""))
+                file:close()
                 return callback("file://" .. tmpFile)
               else
                 return callback("")
