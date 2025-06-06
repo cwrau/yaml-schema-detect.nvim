@@ -272,7 +272,7 @@ local function getSchema(type, callback)
             "-o",
             "pipefail",
             "-c",
-            [[kubectl get crd -A -o json | jq -e '.items[] | select( ]]
+            [[kubectl get crd -A -o json | jq -ce '.items[] | select( ]]
               .. table.concat(crdSelectors, " and ")
               .. [[) | ]]
               .. versionFilter
@@ -285,8 +285,15 @@ local function getSchema(type, callback)
               table.insert(M.tmpFiles, tmpFile)
               local file = io.open(tmpFile, "w")
               if file then
-                file:write(table.concat(job:result(), ""))
+                file:setvbuf("no")
+                local _, error = file:write(table.concat(job:result(), ""))
                 file:close()
+                if error then
+                  vim.schedule(function()
+                    vim.notify("Error writing schema to temporary file: " .. error)
+                  end)
+                  return callback("")
+                end
                 return callback("file://" .. tmpFile)
               else
                 return callback("")
