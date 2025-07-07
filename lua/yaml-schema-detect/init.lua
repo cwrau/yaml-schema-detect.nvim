@@ -425,25 +425,11 @@ function M.setup()
   require("lspconfig").yamlls.setup({
     on_attach = M.refreshSchema,
   })
-  require("which-key").add({ {
-    "<leader>xr",
-    M.refreshSchema,
-    desc = "Refresh YAML schema",
-  } })
-  require("which-key").add({ {
-    "<leader>xyc",
-    cleanup,
-    desc = "Clean YAML schema files",
-  } })
-  require("which-key").add({
-    {
-      "<leader>xyi",
-      function()
-        vim.notify(vim.inspect(M))
-      end,
-      desc = "Show YAML schema info",
-    },
-  })
+  vim.keymap.set("n", "<leader>xr", M.refreshSchema, { desc = "Refresh YAML schema" })
+  vim.keymap.set("n", "<leader>xyc", cleanup, { desc = "Clean YAML schema files" })
+  vim.keymap.set("n", "<leader>xyi", function()
+    vim.notify(vim.inspect(M))
+  end, { desc = "Show YAML schema info" })
   vim.api.nvim_create_autocmd("VimLeavePre", {
     desc = "yaml: auto-k8s-schema-detect: cleanup temporary file",
     callback = cleanup,
