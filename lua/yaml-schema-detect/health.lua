@@ -1,7 +1,5 @@
 local M = {}
 
-local util = require("lspconfig.util")
-
 local health = vim.health
 local function check_executable(name)
   if vim.fn.executable(name) == 1 then
@@ -60,7 +58,6 @@ function M.check()
 
   local required_plugins = {
     "plenary",
-    "lspconfig",
   }
   for _, plugin in ipairs(required_plugins) do
     check_plugin(plugin)

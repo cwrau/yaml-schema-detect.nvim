@@ -422,8 +422,14 @@ local function cleanup()
 end
 
 function M.setup()
-  require("lspconfig").yamlls.setup({
-    on_attach = M.refreshSchema,
+  vim.api.nvim_create_autocmd("LspAttach", {
+    group = vim.api.nvim_create_augroup("yaml-schema-detect-lsp-attach", { clear = true }),
+    callback = function(event)
+      local client = vim.lsp.get_client_by_id(event.data.client_id)
+      if client ~= nil and client.name == "yamlls" then
+        M.refreshSchema(client)
+      end
+    end,
   })
   vim.keymap.set("n", "<leader>xr", M.refreshSchema, { desc = "Refresh YAML schema" })
   vim.keymap.set("n", "<leader>xyc", cleanup, { desc = "Clean YAML schema files" })
