@@ -62,4 +62,4 @@ The plugin works automatically once installed and configured. It will:
 
 ## How It Works
 
-The plugin monitors your YAML files and dynamically updates the yaml-language-server configuration to use the most appropriate schema based on the file content and context. For Kubernetes Custom Resources, it automatically connects to your current cluster to fetch the corresponding CRD schemas, ensuring your YAML files are validated against the actual CRD definitions in your cluster.
+The plugin analyses your YAML files and dynamically updates the yaml-language-server configuration to use the most appropriate schema based on the file content and context. For Kubernetes Custom Resources, it automatically connects to your current cluster to fetch the corresponding CRD schemas, ensuring your YAML files are validated against the actual CRD definitions in your cluster.
