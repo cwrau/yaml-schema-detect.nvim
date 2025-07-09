@@ -446,10 +446,10 @@ function M.setup(opts)
           vim.keymap.set("n", opts.keymap.refresh, M.refreshSchema, { desc = "Refresh YAML schema" })
       end
       if opts.keymap.cleanup then
-          vim.keymap.set("n", "<leader>xyc", cleanup, { desc = "Clean YAML schema files" })
+          vim.keymap.set("n", opts.keymap.cleanup, cleanup, { desc = "Clean YAML schema files" })
       end
       if opts.keymap.info then
-          vim.keymap.set("n", "<leader>xyi", function()
+          vim.keymap.set("n", opts.keymap.info, function()
               vim.notify(vim.inspect(M))
           end, { desc = "Show YAML schema info" })
       end
