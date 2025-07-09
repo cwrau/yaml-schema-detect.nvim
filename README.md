@@ -36,7 +36,9 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
   'cwrau/yaml-schema-detect.nvim',
-  config = true,
+  ---@module "yaml-schema-detect"
+  ---@type YamlSchemaDetectOptions
+  opts = {}, -- use default options
   dependencies = {
     'nvim-lua/plenary.nvim',
   },
@@ -46,10 +48,57 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ## Configuration
 
-Add the following to your Neovim configuration:
+Plugin ships with some sensible defaults which you can tweak in your own way.
 
 ```lua
-require('yaml-schema-detect').setup()
+{
+  disable_keymap = false,
+  keymap = {
+    refresh = "<leader>xr",
+    cleanup = "<leader>xyc",
+    info = "<leader>xyi",
+  },
+}
+```
+
+Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+
+Disable default keybindings entirely:
+
+```lua
+{
+  'cwrau/yaml-schema-detect.nvim',
+  ---@module "yaml-schema-detect"
+  ---@type YamlSchemaDetectOptions
+  opts = {
+    disable_keymap = true,
+  },
+  dependencies = {
+    'nvim-lua/plenary.nvim',
+  },
+  ft = { "yaml" },
+}
+```
+
+Change and toggle default keybindings:
+
+```lua
+{
+  'cwrau/yaml-schema-detect.nvim',
+  ---@module "yaml-schema-detect"
+  ---@type YamlSchemaDetectOptions
+  opts = {
+    keymap = {
+      refresh = "<leader>yr",
+      cleanup = "<leader>yc",
+      info = false,
+    },
+  },
+  dependencies = {
+    'nvim-lua/plenary.nvim',
+  },
+  ft = { "yaml" },
+}
 ```
 
 ## Usage
