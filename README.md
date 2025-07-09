@@ -52,12 +52,12 @@ Plugin ships with some sensible defaults which you can tweak in your own way.
 
 ```lua
 {
-    disable_keymap = false,
-    keymap = {
-        refresh = "<leader>xr",
-        cleanup = "<leader>xyc",
-        info = "<leader>xyi",
-    },
+  disable_keymap = false,
+  keymap = {
+    refresh = "<leader>xr",
+    cleanup = "<leader>xyc",
+    info = "<leader>xyi",
+  },
 }
 ```
 
@@ -68,8 +68,10 @@ Disable default keybindings entirely:
 ```lua
 {
   'cwrau/yaml-schema-detect.nvim',
+  ---@module "yaml-schema-detect"
+  ---@type YamlSchemaDetectOptions
   opts = {
-      disable_keymap = true,
+    disable_keymap = true,
   },
   dependencies = {
     'nvim-lua/plenary.nvim',
@@ -83,11 +85,13 @@ Change and toggle default keybindings:
 ```lua
 {
   'cwrau/yaml-schema-detect.nvim',
+  ---@module "yaml-schema-detect"
+  ---@type YamlSchemaDetectOptions
   opts = {
     keymap = {
-        refresh = "<leader>yr",
-        cleanup = "<leader>yc",
-        info = false,
+      refresh = "<leader>yr",
+      cleanup = "<leader>yc",
+      info = false,
     },
   },
   dependencies = {

@@ -423,7 +423,7 @@ end
 
 ---@class YamlSchemaDetectOptions
 ---@field disable_keymap? boolean
----@field keymap? { refresh?: string, cleanup?: string, info?: string }
+---@field keymap? { refresh?: string|false, cleanup?: string|false, info?: string|false }
 local defaults = {
   disable_keymap = false,
   keymap = {
