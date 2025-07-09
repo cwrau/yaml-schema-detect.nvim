@@ -445,6 +445,7 @@ function M.setup(opts)
       end
     end,
   })
+  if not opts.disable_keymap then
     if opts.keymap.refresh then
       vim.keymap.set("n", opts.keymap.refresh, M.refreshSchema, { desc = "Refresh YAML schema" })
     end
