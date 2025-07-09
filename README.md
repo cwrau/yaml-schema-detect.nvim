@@ -36,6 +36,8 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 ```lua
 {
   'cwrau/yaml-schema-detect.nvim',
+  ---@module "yaml-schema-detect"
+  ---@type YamlSchemaDetectOptions
   opts = {}, -- use default options
   dependencies = {
     'nvim-lua/plenary.nvim',

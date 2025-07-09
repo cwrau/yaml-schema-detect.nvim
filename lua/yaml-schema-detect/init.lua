@@ -421,15 +421,19 @@ local function cleanup()
   M.tmpFiles = {}
 end
 
+---@class YamlSchemaDetectOptions
+---@field disable_keymap? boolean
+---@field keymap? { refresh?: string, cleanup?: string, info?: string }
 local defaults = {
-    disable_keymap = false,
-    keymap = {
-        refresh = "<leader>xr",
-        cleanup = "<leader>xyc",
-        info = "<leader>xyi",
-    },
+  disable_keymap = false,
+  keymap = {
+    refresh = "<leader>xr",
+    cleanup = "<leader>xyc",
+    info = "<leader>xyi",
+  },
 }
 
+---@param opts YamlSchemaDetectOptions?
 function M.setup(opts)
   opts = vim.tbl_deep_extend("force", defaults, opts or {})
   vim.api.nvim_create_autocmd("LspAttach", {
@@ -441,18 +445,17 @@ function M.setup(opts)
       end
     end,
   })
-  if not opts.disable_keymap then
-      if opts.keymap.refresh then
-          vim.keymap.set("n", opts.keymap.refresh, M.refreshSchema, { desc = "Refresh YAML schema" })
-      end
-      if opts.keymap.cleanup then
-          vim.keymap.set("n", opts.keymap.cleanup, cleanup, { desc = "Clean YAML schema files" })
-      end
-      if opts.keymap.info then
-          vim.keymap.set("n", opts.keymap.info, function()
-              vim.notify(vim.inspect(M))
-          end, { desc = "Show YAML schema info" })
-      end
+    if opts.keymap.refresh then
+      vim.keymap.set("n", opts.keymap.refresh, M.refreshSchema, { desc = "Refresh YAML schema" })
+    end
+    if opts.keymap.cleanup then
+      vim.keymap.set("n", opts.keymap.cleanup, cleanup, { desc = "Clean YAML schema files" })
+    end
+    if opts.keymap.info then
+      vim.keymap.set("n", opts.keymap.info, function()
+        vim.notify(vim.inspect(M))
+      end, { desc = "Show YAML schema info" })
+    end
   end
   vim.api.nvim_create_autocmd("VimLeavePre", {
     desc = "yaml: auto-k8s-schema-detect: cleanup temporary file",
