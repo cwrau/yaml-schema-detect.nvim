@@ -345,9 +345,85 @@ local function getSchemas(lines, callback)
   end
 end
 
+local function iter_parents(start, stop)
+  local dirs = {}
+  local current = vim.loop.fs_realpath(start)
+  stop = vim.loop.fs_realpath(stop)
+  while current and current:sub(1, #stop) == stop and current ~= stop do
+    table.insert(dirs, current)
+    local parent = vim.fn.fnamemodify(current, ":h")
+    if parent == current then
+      break
+    end
+    current = parent
+  end
+  table.insert(dirs, stop)
+  return dirs
+end
+
+local function find_vscode_schema(bufnr)
+  local candidates = {
+    ".vscode/schema.json",
+    ".vscode/schema.yaml",
+    "schema.json",
+    "schema.yaml",
+  }
+  local buf_path = vim.api.nvim_buf_get_name(bufnr or 0)
+  if not buf_path or buf_path == "" then
+    return nil
+  end
+  local file_dir = vim.fn.fnamemodify(buf_path, ":h")
+  local root = vim.loop.fs_realpath(vim.fn.getcwd())
+
+  for _, dir in ipairs(iter_parents(file_dir, root)) do
+    for _, candidate in ipairs(candidates) do
+      local path = dir .. "/" .. candidate
+      local file = io.open(path, "r")
+      if file then
+        file:close()
+        return path
+      end
+    end
+  end
+
+  -- Fallback: (optional) check global or workspace schema locations here
+
+  return nil
+end
+
 ---@param client vim.lsp.Client|nil
-function M.refreshSchema(client)
+function M.refreshSchema(client, opts)
+  -- Handle Neovim LSP on_attach(client, bufnr) signature
+  if type(opts) == "number" then
+    opts = {} -- or you can allow passing bufnr explicitly if needed
+  elseif opts == nil then
+    opts = {}
+  end
   local bufnr = vim.api.nvim_get_current_buf()
+
+  -- Try VSCode-style schema auto-load first
+  -- VSCode auto-load only if not ignored
+  if not opts.ignore_vscode then
+    local schema_path = find_vscode_schema(bufnr)
+    if schema_path then
+      local schemaURI = "file://" .. schema_path
+      client = client or vim.lsp.get_clients({ bufnr = bufnr, name = "yamlls" })[1]
+      if client then
+        local currentBufferSelector = vim.uri_from_bufnr(bufnr)
+        client.settings = vim.tbl_deep_extend("force", client.settings or {}, {
+          yaml = {
+            schemas = {
+              [schemaURI] = currentBufferSelector,
+            },
+          },
+        })
+        client:notify("workspace/didChangeConfiguration", { settings = client.settings })
+        vim.notify("Auto-loaded YAML schema from: " .. schema_path, vim.log.levels.INFO)
+        return
+      end
+    end
+  end
+
   local fileName = vim.api.nvim_buf_get_name(bufnr)
   if fileName:find("values.yaml$") then
     ---@type string
@@ -421,43 +497,121 @@ local function cleanup()
   M.tmpFiles = {}
 end
 
----@class YamlSchemaDetectOptions
----@field disable_keymap? boolean
----@field keymap? { refresh?: string|false, cleanup?: string|false, info?: string|false }
-local defaults = {
-  disable_keymap = false,
-  keymap = {
-    refresh = "<leader>xr",
-    cleanup = "<leader>xyc",
-    info = "<leader>xyi",
-  },
-}
-
----@param opts YamlSchemaDetectOptions?
-function M.setup(opts)
-  opts = vim.tbl_deep_extend("force", defaults, opts or {})
-  vim.api.nvim_create_autocmd("LspAttach", {
-    group = vim.api.nvim_create_augroup("yaml-schema-detect-lsp-attach", { clear = true }),
-    callback = function(event)
-      local client = vim.lsp.get_client_by_id(event.data.client_id)
-      if client ~= nil and client.name == "yamlls" then
-        M.refreshSchema(client)
-      end
-    end,
-  })
-  if not opts.disable_keymap then
-    if opts.keymap.refresh then
-      vim.keymap.set("n", opts.keymap.refresh, M.refreshSchema, { desc = "Refresh YAML schema" })
+function M.load_schema_with_picker()
+  local function apply_schema(path)
+    if not path or path == "" then
+      vim.notify("No schema selected.", vim.log.levels.WARN)
+      return
     end
-    if opts.keymap.cleanup then
-      vim.keymap.set("n", opts.keymap.cleanup, cleanup, { desc = "Clean YAML schema files" })
-    end
-    if opts.keymap.info then
-      vim.keymap.set("n", opts.keymap.info, function()
-        vim.notify(vim.inspect(M))
-      end, { desc = "Show YAML schema info" })
+    local schemaURI = "file://" .. path
+    local client = vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = "yamlls" })[1]
+    if client then
+      local currentBufferSelector = vim.uri_from_bufnr(vim.api.nvim_get_current_buf())
+      client.settings = vim.tbl_deep_extend("force", client.settings or {}, {
+        yaml = {
+          schemas = {
+            [schemaURI] = currentBufferSelector,
+          },
+        },
+      })
+      client:notify("workspace/didChangeConfiguration", { settings = client.settings })
+      vim.notify("Loaded YAML schema from: " .. path, vim.log.levels.INFO)
+    else
+      vim.notify("yamlls LSP client not found", vim.log.levels.ERROR)
     end
   end
+
+  local buf_path = vim.api.nvim_buf_get_name(0)
+  local dir = vim.fn.fnamemodify(buf_path, ":h")
+
+  -- Try Telescope, else fall back to vim.ui.select
+  local ok, telescope = pcall(require, "telescope.builtin")
+  if ok then
+    telescope.find_files({
+      prompt_title = "Select any file as schema",
+      cwd = dir,
+      -- No filtering on extension
+      attach_mappings = function(prompt_bufnr, map)
+        local actions = require("telescope.actions")
+        local action_state = require("telescope.actions.state")
+        actions.select_default:replace(function()
+          actions.close(prompt_bufnr)
+          local selection = action_state.get_selected_entry()
+          if selection and (selection.path or selection.filename) then
+            local path = selection.path or (dir .. "/" .. selection.filename)
+            apply_schema(path)
+          end
+        end)
+        return true
+      end,
+    })
+    return
+  end
+
+  -- Fallback: build a list of all files (no extension filtering) and use vim.ui.select
+  local files = {}
+  local handle = vim.loop.fs_scandir(dir)
+  if handle then
+    while true do
+      local name, type = vim.loop.fs_scandir_next(handle)
+      if not name then
+        break
+      end
+      if type == "file" then
+        table.insert(files, dir .. "/" .. name)
+      end
+    end
+  end
+
+  if #files == 0 then
+    vim.notify("No files found in: " .. dir, vim.log.levels.WARN)
+    return
+  end
+
+  vim.ui.select(files, { prompt = "Select any file to load as schema" }, apply_schema)
+end
+
+function M.setup()
+  vim.lsp.config("yamlls", {
+    on_attach = M.refreshSchema,
+  })
+  require("which-key").add({
+    {
+      "<leader>zr",
+      M.refreshSchema,
+      desc = "Refresh YAML schema",
+    },
+  })
+  require("which-key").add({
+    {
+      "<leader>zR",
+      function()
+        require("yaml-schema-detect").refreshSchema(nil, { ignore_vscode = true })
+      end,
+      desc = "Refresh YAML schema (ignore VSCode auto-load)",
+    },
+  })
+  require("which-key").add({ {
+    "<leader>zyc",
+    cleanup,
+    desc = "Clean YAML schema files",
+  } })
+  require("which-key").add({
+    {
+      "<leader>zyi",
+      function()
+        vim.notify(vim.inspect(M))
+      end,
+      desc = "Show YAML schema info",
+    },
+  })
+  require("which-key").add({
+    {
+      "<leader>zyp",
+      require("yaml-schema-detect").load_schema_with_picker,
+      desc = "Pick and load YAML schema from file",
+    },
+  })
   vim.api.nvim_create_autocmd("VimLeavePre", {
     desc = "yaml: auto-k8s-schema-detect: cleanup temporary file",
     callback = cleanup,

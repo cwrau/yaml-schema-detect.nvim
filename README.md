@@ -11,10 +11,11 @@ A Neovim plugin that automatically detects and applies YAML schemas for your YAM
 - Buffer-specific schema management
 - Automatic fetching of Kubernetes CRD schemas from your current cluster
 - Real-time schema validation against your cluster's CRDs
+- Load schema from file
 
 ## Prerequisites
 
-- Neovim
+- Neovim > 0.11.0
 - [yaml-language-server](https://github.com/redhat-developer/yaml-language-server)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
@@ -24,7 +25,7 @@ Using [packer.nvim](https://github.com/wbthomason/packer.nvim):
 
 ```lua
 use {
-  'cwrau/yaml-schema-detect.nvim',
+  'ChristofferNissen/yaml-schema-detect.nvim',
   requires = {
     'nvim-lua/plenary.nvim',
   }
@@ -35,10 +36,15 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 {
+<<<<<<< HEAD
   'cwrau/yaml-schema-detect.nvim',
   ---@module "yaml-schema-detect"
   ---@type YamlSchemaDetectOptions
   opts = {}, -- use default options
+=======
+  'ChristofferNissen/yaml-schema-detect.nvim',
+  config = true,
+>>>>>>> 9848976 (refactor)
   dependencies = {
     'nvim-lua/plenary.nvim',
   },
