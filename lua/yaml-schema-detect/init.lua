@@ -322,6 +322,7 @@ local function getSchemas(lines, callback)
         vim.schedule(function()
           vim.notify("Couldn't find schema for " .. type.apiVersion:joinedString() .. "/" .. type.kind)
         end)
+        return
       end
       if type.apiVersion and type.kind then
         M.schemas[type.apiVersion:joinedString()] = M.schemas[type.apiVersion:joinedString()] or {}
