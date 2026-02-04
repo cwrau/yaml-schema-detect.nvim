@@ -5,17 +5,19 @@ A Neovim plugin that automatically detects and applies YAML schemas for your YAM
 ## Features
 
 - Automatic YAML schema detection for your files
-- Seamless integration with yaml-language-server
+- Seamless integration with yaml-language-server and helm-ls
 - Dynamic schema switching based on file content
 - Support for multiple YAML schemas
 - Buffer-specific schema management
 - Automatic fetching of Kubernetes CRD schemas from your current cluster
 - Real-time schema validation against your cluster's CRDs
+- Support for Helm chart files
 
 ## Prerequisites
 
 - Neovim
 - [yaml-language-server](https://github.com/redhat-developer/yaml-language-server)
+- [helm-ls](https://github.com/mrjosh/helm-ls) (for Helm chart support)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
 
 ## Installation
@@ -42,7 +44,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   dependencies = {
     'nvim-lua/plenary.nvim',
   },
-  ft = { "yaml" },
+  ft = { "yaml", "helm" },
 }
 ```
 
@@ -76,7 +78,7 @@ Disable default keybindings entirely:
   dependencies = {
     'nvim-lua/plenary.nvim',
   },
-  ft = { "yaml" },
+  ft = { "yaml", "helm" },
 }
 ```
 
@@ -97,7 +99,7 @@ Change and toggle default keybindings:
   dependencies = {
     'nvim-lua/plenary.nvim',
   },
-  ft = { "yaml" },
+  ft = { "yaml", "helm" },
 }
 ```
 
@@ -106,9 +108,9 @@ Change and toggle default keybindings:
 The plugin works automatically once installed and configured. It will:
 
 1. Detect the appropriate YAML schema for your files
-2. Update yaml-language-server settings accordingly
+2. Update yaml-language-server or helm-ls settings accordingly
 3. Provide schema-aware completions and validations
 
 ## How It Works
 
-The plugin analyses your YAML files and dynamically updates the yaml-language-server configuration to use the most appropriate schema based on the file content and context. For Kubernetes Custom Resources, it automatically connects to your current cluster to fetch the corresponding CRD schemas, ensuring your YAML files are validated against the actual CRD definitions in your cluster.
+The plugin analyses your YAML files and dynamically updates the yaml-language-server or helm-ls configuration to use the most appropriate schema based on the file content and context. For Kubernetes Custom Resources, it automatically connects to your current cluster to fetch the corresponding CRD schemas, ensuring your YAML files are validated against the actual CRD definitions in your cluster.

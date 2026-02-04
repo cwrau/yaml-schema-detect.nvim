@@ -24,11 +24,14 @@ end
 
 local function check_lsp_client()
   local yaml_client = vim.lsp.get_clients({ name = "yamlls" })[1]
+  local helm_client = vim.lsp.get_clients({ name = "helm_ls" })[1]
 
   if yaml_client ~= nil then
     health.ok("yaml-language-server is running")
+  elseif helm_client ~= nil then
+    health.ok("helm-ls is running")
   else
-    health.warn("yaml-language-server is not running. Make sure it's properly configured in your LSP setup")
+    health.warn("Neither yaml-language-server nor helm-ls is running. Make sure one is properly configured in your LSP setup")
   end
 end
 
