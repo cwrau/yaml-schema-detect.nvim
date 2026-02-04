@@ -28,10 +28,14 @@ local function check_lsp_client()
 
   if yaml_client ~= nil then
     health.ok("yaml-language-server is running")
-  elseif helm_client ~= nil then
+  else
+    health.warn("yaml-language-server is not running. YAML schema detection may not work.")
+  end
+
+  if helm_client ~= nil then
     health.ok("helm-ls is running")
   else
-    health.warn("Neither yaml-language-server nor helm-ls is running. Make sure one is properly configured in your LSP setup")
+    health.warn("helm-ls is not running. Helm chart schema detection may not work.")
   end
 end
 
