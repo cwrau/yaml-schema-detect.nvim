@@ -20,6 +20,27 @@ local function get_client()
   return nil
 end
 
+-- ---@param existingSchemas table|nil
+-- local function
+
+---@param schemas table
+---@param currentBufferSelector string
+local function update_schemas(schemas, currentBufferSelector)
+  if schemas then
+    for existingSchemaURI, existingSelectors in pairs(schemas) do
+      if vim.islist(existingSelectors) then
+        for idx, existingSelector in pairs(existingSelectors) do
+          if existingSelector == currentBufferSelector or existingSelector:find("*") then
+            table.remove(schemas[existingSchemaURI], idx)
+          end
+        end
+      elseif existingSelectors == currentBufferSelector or existingSelectors:find("*") then
+        schemas[existingSchemaURI] = nil
+      end
+    end
+  end
+end
+
 ---@param schemaURI string
 ---@param client vim.lsp.Client|nil
 local function change_settings(schemaURI, client)
@@ -39,18 +60,10 @@ local function change_settings(schemaURI, client)
     then
       local previous_settings = client.settings
       if previous_settings and previous_settings.yaml and previous_settings.yaml.schemas then
-        for existingSchemaURI, existingSelectors in pairs(previous_settings.yaml.schemas) do
-          if vim.islist(existingSelectors) then
-            for idx, existingSelector in pairs(existingSelectors) do
-              if existingSelector == currentBufferSelector or existingSelector:find("*") then
-                table.remove(previous_settings.yaml.schemas[existingSchemaURI], idx)
-              end
-            end
-          elseif existingSelectors == currentBufferSelector or existingSelectors:find("*") then
-            previous_settings.yaml.schemas[existingSchemaURI] = nil
-          end
-        end
+        local existing_schemas = previous_settings.yaml.schemas
+        update_schemas(existing_schemas, currentBufferSelector)
       end
+
       client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
         yaml = {
           schemas = {
@@ -79,18 +92,10 @@ local function change_settings(schemaURI, client)
         and previous_settings["helm-ls"].yamlls.config
         and previous_settings["helm-ls"].yamlls.config.schemas
       then
-        for existingSchemaURI, existingSelectors in pairs(previous_settings["helm-ls"].yamlls.config.schemas) do
-          if vim.islist(existingSelectors) then
-            for idx, existingSelector in pairs(existingSelectors) do
-              if existingSelector == currentBufferSelector or existingSelector:find("*") then
-                table.remove(previous_settings["helm-ls"].yamlls.config.schemas[existingSchemaURI], idx)
-              end
-            end
-          elseif existingSelectors == currentBufferSelector or existingSelectors:find("*") then
-            previous_settings["helm-ls"].yamlls.config.schemas[existingSchemaURI] = nil
-          end
-        end
+        local existing_schemas = previous_settings["helm-ls"].yamlls.config.schemas
+        update_schemas(existing_schemas, currentBufferSelector)
       end
+
       client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
         ["helm-ls"] = {
           yamlls = {
