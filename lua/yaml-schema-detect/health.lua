@@ -24,11 +24,18 @@ end
 
 local function check_lsp_client()
   local yaml_client = vim.lsp.get_clients({ name = "yamlls" })[1]
+  local helm_client = vim.lsp.get_clients({ name = "helm_ls" })[1]
 
   if yaml_client ~= nil then
     health.ok("yaml-language-server is running")
   else
-    health.warn("yaml-language-server is not running. Make sure it's properly configured in your LSP setup")
+    health.warn("yaml-language-server is not running. YAML schema detection may not work.")
+  end
+
+  if helm_client ~= nil then
+    health.ok("helm-ls is running")
+  else
+    health.warn("helm-ls is not running. Helm chart schema detection may not work.")
   end
 end
 

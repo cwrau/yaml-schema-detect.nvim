@@ -11,11 +11,34 @@ local M = {
 
 ---@return vim.lsp.Client|nil
 local function get_client()
-  -- this is to ignore helm files
-  if vim.bo.filetype ~= "yaml" then
-    return nil
+  local filetype = vim.bo.filetype
+  if filetype == "yaml" then
+    return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = "yamlls" })[1]
+  elseif filetype == "helm" then
+    return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = "helm_ls" })[1]
   end
-  return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = "yamlls" })[1]
+  return nil
+end
+
+-- ---@param existingSchemas table|nil
+-- local function
+
+---@param schemas table
+---@param currentBufferSelector string
+local function update_schemas(schemas, currentBufferSelector)
+  if schemas then
+    for existingSchemaURI, existingSelectors in pairs(schemas) do
+      if vim.islist(existingSelectors) then
+        for idx, existingSelector in pairs(existingSelectors) do
+          if existingSelector == currentBufferSelector or existingSelector:find("*") then
+            table.remove(schemas[existingSchemaURI], idx)
+          end
+        end
+      elseif existingSelectors == currentBufferSelector or existingSelectors:find("*") then
+        schemas[existingSchemaURI] = nil
+      end
+    end
+  end
 end
 
 ---@param schemaURI string
@@ -26,36 +49,68 @@ local function change_settings(schemaURI, client)
     return
   end
   local currentBufferSelector = vim.uri_from_bufnr(vim.api.nvim_get_current_buf())
-  if
-    client.settings == nil
-    or client.settings.yaml == nil
-    or client.settings.yaml.schemas == nil
-    or client.settings.yaml.schemas[schemaURI] ~= currentBufferSelector
-  then
-    local previous_settings = client.settings
-    if previous_settings and previous_settings.yaml and previous_settings.yaml.schemas then
-      for existingSchemaURI, existingSelectors in pairs(previous_settings.yaml.schemas) do
-        if vim.islist(existingSelectors) then
-          for idx, existingSelector in pairs(existingSelectors) do
-            if existingSelector == currentBufferSelector or existingSelector:find("*") then
-              table.remove(previous_settings.yaml.schemas[existingSchemaURI], idx)
-            end
-          end
-        elseif existingSelectors == currentBufferSelector or existingSelectors:find("*") then
-          previous_settings.yaml.schemas[existingSchemaURI] = nil
-        end
+  local filetype = vim.bo.filetype
+
+  if filetype == "yaml" then
+    if
+      client.settings == nil
+      or client.settings.yaml == nil
+      or client.settings.yaml.schemas == nil
+      or client.settings.yaml.schemas[schemaURI] ~= currentBufferSelector
+    then
+      local previous_settings = client.settings
+      if previous_settings and previous_settings.yaml and previous_settings.yaml.schemas then
+        local existing_schemas = previous_settings.yaml.schemas
+        update_schemas(existing_schemas, currentBufferSelector)
       end
-    end
-    client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
-      yaml = {
-        schemas = {
-          [schemaURI] = currentBufferSelector,
+
+      client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
+        yaml = {
+          schemas = {
+            [schemaURI] = currentBufferSelector,
+          },
         },
-      },
-    })
-    vim.notify("YAML schema has been updated", vim.log.levels.INFO)
-  else
-    vim.notify("YAML schema is already up-to-date", vim.log.levels.INFO)
+      })
+      vim.notify("YAML schema has been updated", vim.log.levels.INFO)
+    else
+      vim.notify("YAML schema is already up-to-date", vim.log.levels.INFO)
+    end
+  elseif filetype == "helm" then
+    if
+      client.settings == nil
+      or client.settings["helm-ls"] == nil
+      or client.settings["helm-ls"].yamlls == nil
+      or client.settings["helm-ls"].yamlls.config == nil
+      or client.settings["helm-ls"].yamlls.config.schemas == nil
+      or client.settings["helm-ls"].yamlls.config.schemas[schemaURI] ~= currentBufferSelector
+    then
+      local previous_settings = client.settings
+      if
+        previous_settings
+        and previous_settings["helm-ls"]
+        and previous_settings["helm-ls"].yamlls
+        and previous_settings["helm-ls"].yamlls.config
+        and previous_settings["helm-ls"].yamlls.config.schemas
+      then
+        local existing_schemas = previous_settings["helm-ls"].yamlls.config.schemas
+        update_schemas(existing_schemas, currentBufferSelector)
+      end
+
+      client.settings = vim.tbl_deep_extend("force", previous_settings or {}, {
+        ["helm-ls"] = {
+          yamlls = {
+            config = {
+              schemas = {
+                [schemaURI] = currentBufferSelector,
+              },
+            },
+          },
+        },
+      })
+      vim.notify("YAML schema has been updated", vim.log.levels.INFO)
+    else
+      vim.notify("YAML schema is already up-to-date", vim.log.levels.INFO)
+    end
   end
   client:notify("workspace/didChangeConfiguration", { settings = client.settings })
 end
@@ -441,7 +496,7 @@ function M.setup(opts)
     group = vim.api.nvim_create_augroup("yaml-schema-detect-lsp-attach", { clear = true }),
     callback = function(event)
       local client = vim.lsp.get_client_by_id(event.data.client_id)
-      if client ~= nil and client.name == "yamlls" then
+      if client ~= nil and (client.name == "yamlls" or client.name == "helm_ls") then
         M.refreshSchema(client)
       end
     end,
