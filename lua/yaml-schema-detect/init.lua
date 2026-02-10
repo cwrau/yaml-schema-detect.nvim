@@ -10,12 +10,13 @@ local M = {
 }
 
 ---@return vim.lsp.Client|nil
+---@param bufnr integer
 local function get_client()
   local filetype = vim.bo.filetype
   if filetype == "yaml" then
-    return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = "yamlls" })[1]
+    return vim.lsp.get_clients({ bufnr = bufnr, name = "yamlls" })[1]
   elseif filetype == "helm" then
-    return vim.lsp.get_clients({ bufnr = vim.api.nvim_get_current_buf(), name = "helm_ls" })[1]
+    return vim.lsp.get_clients({ bufnr = bufnr, name = "helm_ls" })[1]
   end
   return nil
 end
@@ -43,13 +44,14 @@ end
 
 ---@param schemaURI string
 ---@param client vim.lsp.Client|nil
-local function change_settings(schemaURI, client)
-  client = client or get_client()
+---@param bufnr integer
+local function change_settings(schemaURI, client, bufnr)
+  client = client or get_client(bufnr)
   if client == nil then
     return
   end
-  local currentBufferSelector = vim.uri_from_bufnr(vim.api.nvim_get_current_buf())
-  local filetype = vim.bo.filetype
+  local currentBufferSelector = vim.uri_from_bufnr(bufnr)
+  local filetype = vim.bo[bufnr].filetype
 
   if filetype == "yaml" then
     if
@@ -415,7 +417,7 @@ function M.refreshSchema(client)
     end
 
     if file_exists(schemaPath) then
-      return change_settings("file://" .. schemaPath, client)
+      return change_settings("file://" .. schemaPath, client, bufnr)
     end
   end
 
@@ -448,7 +450,7 @@ function M.refreshSchema(client)
     if schemaURI then
       --- switch to main context for UI call
       vim.schedule(function()
-        change_settings(schemaURI, client)
+        change_settings(schemaURI, client, bufnr)
       end)
     end
   end)
